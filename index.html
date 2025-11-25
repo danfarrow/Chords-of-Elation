@@ -1,0 +1,1121 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chords of Elation</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom CSS for the Knob/Dial appearance */
+        .knob-container {
+            position: relative;
+            width: 100px;
+            height: 100px;
+            margin: 0 auto;
+        }
+
+        .knob-base {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: #2d3748; /* Dark grey-blue */
+            box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.5), 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .knob-marker {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 80%;
+            height: 80%;
+            border-radius: 50%;
+            background: #4a5568; /* Slightly lighter inner part */
+            cursor: grab;
+            touch-action: none; /* Crucial for mobile dragging */
+        }
+
+        .knob-indicator {
+            position: absolute;
+            width: 6px;
+            height: 40%;
+            background: #f6ad55; /* Orange accent */
+            border-radius: 3px;
+            bottom: 50%;
+            left: 50%;
+            transform-origin: center bottom;
+            transform: translateX(-55%) rotate(0deg); /* Default rotation */
+            transition: background 0.1s;
+        }
+
+        .channel-card {
+            transition: all 0.3s ease;
+            transform: scale(1);
+        }
+
+        .channel-card-active {
+            box-shadow: 0 0 20px 5px rgba(246, 173, 85, 0.5); /* Orange glow for ON state */
+            border-color: #f6ad55;
+            transform: scale(1.03);
+        }
+
+        /* Style for Incline (+2 Octaves) - Purple Glow */
+        .incline-active {
+            border-color: #a78bfa !important; /* Tailwind purple-400 */
+            box-shadow: 0 0 25px 8px rgba(167, 139, 250, 0.7); /* Stronger purple glow */
+        }
+
+        /* Style for Decline (-2 Octaves) - Cyan Glow */
+        .decline-active {
+            border-color: #2dd4bf !important; /* Tailwind cyan-400 */
+            box-shadow: 0 0 25px 8px rgba(45, 212, 191, 0.7); /* Stronger cyan glow */
+        }
+
+
+        /* Style for the Low Mode button when active */
+        .low-active-style {
+            background-color: #6366f1 !important; /* Indigo-500 */
+            color: #ffffff !important;
+            box-shadow: 0 0 15px 3px rgba(99, 102, 241, 0.7);
+        }
+
+        /* Custom track style for duration slider */
+        .slider-duration::-webkit-slider-runnable-track {
+            background: #4a5568;
+            height: 8px;
+            border-radius: 4px;
+        }
+        .slider-duration::-moz-range-track {
+            background: #4a5568;
+            height: 8px;
+            border-radius: 4px;
+        }
+        .slider-duration::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #9f7aea; /* Purple */
+            cursor: pointer;
+            margin-top: -4px; /* Adjust thumb vertical position */
+            box-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
+        }
+        .slider-duration::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #9f7aea;
+            cursor: pointer;
+        }
+
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-100 min-h-screen font-sans flex items-center justify-center p-4">
+
+    <div id="app" class="w-full max-w-5xl">
+        <header class="text-center mb-8">
+            <h1 class="text-4xl font-extrabold text-white mb-2">Chords of Elation</h1>
+        </header>
+
+        <!-- Initial Interaction Overlay -->
+        <div id="start-overlay" class="absolute inset-0 bg-gray-900 bg-opacity-95 flex items-center justify-center z-50 transition-opacity duration-500">
+            <button onclick="startAudio()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-xl shadow-lg transition duration-300 transform hover:scale-105">
+                Start Audio System
+            </button>
+        </div>
+
+        <!-- Master Control Section -->
+        <div class="mb-6 p-4 bg-purple-900 bg-opacity-30 rounded-xl border border-purple-700 text-center">
+             <h2 class="text-xl font-bold text-purple-300 mb-4">Master Controls</h2>
+
+             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+                <!-- Column 1: Pitch Shift & Random Duration -->
+                <div>
+                    <!-- 1. Pitch Shift Controls (Incline & Decline) -->
+                    <div class="p-4 bg-gray-800 bg-opacity-70 rounded-lg border border-gray-700">
+                        <h3 class="text-lg font-semibold text-white mb-3">Pitch Shift Controls</h3>
+                        <p class="text-sm text-gray-400 mb-4">Master frequency shifts. Clicking an active button resets the shift.</p>
+                        <div class="grid grid-cols-2 gap-3">
+                            <button id="incline-button" onclick="handleInclineClick()" class="py-3 px-4 rounded-lg font-bold text-sm transition duration-200 bg-purple-600 hover:bg-purple-500 text-white shadow-lg">
+                                Incline (+2 Octaves)
+                            </button>
+                            <button id="decline-button" onclick="handleDeclineClick()" class="py-3 px-4 rounded-lg font-bold text-sm transition duration-200 bg-purple-600 hover:bg-purple-500 text-white shadow-lg">
+                                Decline (-2 Octaves)
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 2. Random Duration Control (Reinstated) -->
+                    <div class="p-4 bg-gray-800 bg-opacity-70 rounded-lg border border-gray-700 mt-4">
+                        <h3 class="text-lg font-semibold text-white mb-3">Ramp Time Randomiser</h3>
+                        <p class="text-sm text-gray-400 mb-4">Randomise the duration of all frequency ramps (from 9s to 52s).</p>
+                        <button onclick="randomiseBoostTimes()" class="w-full py-3 px-4 rounded-lg font-bold text-sm transition duration-200 bg-yellow-400 hover:bg-yellow-300 text-gray-900 shadow-lg">
+                            Randomise Ramp Durations
+                        </button>
+                    </div>
+                </div>
+
+
+                <!-- Column 2: Tuning Presets (Low, Random, Harmonic, Bell) -->
+                <div class="p-4 bg-gray-800 bg-opacity-70 rounded-lg border border-gray-700">
+                    <h3 class="text-lg font-semibold text-white mb-3">Tuning Presets</h3>
+                    <p class="text-sm text-gray-400 mb-4">Quickly set all channels to new tuning configurations.</p>
+                    <!-- 2x2 layout for presets -->
+                    <div class="grid grid-cols-2 gap-3">
+
+                        <!-- LOW MODE BUTTON -->
+                        <button id="low-mode-button" onclick="toggleLowMode()"
+                                class="py-3 px-4 rounded-lg font-bold text-sm transition duration-200 bg-gray-600 hover:bg-gray-500 text-gray-300 shadow-lg">
+                            Low (&lt; 205 Hz)
+                        </button>
+
+                        <!-- RANDOM BUTTON -->
+                        <button onclick="setRandomFrequencies()" class="py-3 px-4 rounded-lg font-bold text-sm transition duration-200 bg-yellow-600 hover:bg-yellow-500 text-gray-900 shadow-lg">
+                            Random
+                        </button>
+
+                        <!-- HARMONIC BUTTON -->
+                        <button onclick="setHarmonicFrequencies()" class="py-3 px-4 rounded-lg font-bold text-sm transition duration-200 bg-teal-600 hover:bg-teal-500 text-white shadow-lg">
+                            Harmonic
+                        </button>
+
+                        <!-- BELL BUTTON -->
+                        <button onclick="setBellFrequencies()" class="py-3 px-4 rounded-lg font-bold text-sm transition duration-200 bg-pink-600 hover:bg-pink-500 text-white shadow-lg">
+                            Bell
+                        </button>
+                    </div>
+                </div>
+
+             </div>
+        </div>
+
+        <div id="controls-grid" class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <!-- Channel 1 (Default: Square) -->
+            <div id="channel-1" class="channel-card bg-gray-800 p-4 rounded-xl border-2 border-gray-700 flex flex-col items-center">
+                <h2 class="text-xl font-semibold mb-3 text-indigo-400">Channel 1</h2>
+
+                <!-- Waveform Selector -->
+                <div class="w-full mb-3">
+                    <label for="waveform-1" class="block text-sm font-medium text-gray-400 mb-1">Waveform</label>
+                    <select id="waveform-1" onchange="changeWaveform(0, this.value)"
+                            class="w-full p-2 rounded-lg bg-gray-700 text-white border border-gray-600 focus:ring-indigo-500 focus:border-indigo-500">
+                        <option value="sine">Sine</option>
+                        <option value="triangle">Triangle</option>
+                        <option value="square" selected>Square</option>
+                        <option value="sawtooth">Sawtooth</option>
+                        <option value="organ">Organ (Rich)</option>
+                    </select>
+                </div>
+
+                <div class="knob-container mb-4">
+                    <div class="knob-base"></div>
+                    <div id="knob-1" class="knob-marker" data-channel="0">
+                        <div id="indicator-1" class="knob-indicator" style="transform: translateX(-55%) rotate(45deg);"></div>
+                    </div>
+                </div>
+                <span id="freq-display-1" class="text-lg font-mono text-gray-300 mb-4">440 Hz</span>
+
+                <!-- Duration Control -->
+                <div class="w-full mb-4">
+                    <label for="duration-1" class="block text-sm font-medium text-gray-400">Ramp Duration: <span id="time-display-1" class="font-mono text-white">5.0s</span></label>
+                    <input type="range" id="duration-1" min="0.5" max="120" step="0.5" value="5"
+                           oninput="updateDuration(0, this.value)"
+                           class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer slider-duration">
+                </div>
+
+                <button id="toggle-1" onclick="toggleOscillator(0)" class="w-full py-2 rounded-lg font-medium transition duration-200 bg-gray-600 hover:bg-gray-500 text-gray-300">
+                    OFF
+                </button>
+            </div>
+
+            <!-- Channel 2 (Default: Sawtooth) -->
+            <div id="channel-2" class="channel-card bg-gray-800 p-4 rounded-xl border-2 border-gray-700 flex flex-col items-center">
+                <h2 class="text-xl font-semibold mb-3 text-indigo-400">Channel 2</h2>
+
+                <!-- Waveform Selector -->
+                <div class="w-full mb-3">
+                    <label for="waveform-2" class="block text-sm font-medium text-gray-400 mb-1">Waveform</label>
+                    <select id="waveform-2" onchange="changeWaveform(1, this.value)"
+                            class="w-full p-2 rounded-lg bg-gray-700 text-white border border-gray-600 focus:ring-indigo-500 focus:border-indigo-500">
+                        <option value="sine">Sine</option>
+                        <option value="triangle">Triangle</option>
+                        <option value="square">Square</option>
+                        <option value="sawtooth" selected>Sawtooth</option>
+                        <option value="organ">Organ (Rich)</option>
+                    </select>
+                </div>
+
+                <div class="knob-container mb-4">
+                    <div class="knob-base"></div>
+                    <div id="knob-2" class="knob-marker" data-channel="1">
+                        <div id="indicator-2" class="knob-indicator" style="transform: translateX(-50%) rotate(0deg);"></div>
+                    </div>
+                </div>
+                <span id="freq-display-2" class="text-lg font-mono text-gray-300 mb-4">440 Hz</span>
+
+                <!-- Duration Control -->
+                <div class="w-full mb-4">
+                    <label for="duration-2" class="block text-sm font-medium text-gray-400">Ramp Duration: <span id="time-display-2" class="font-mono text-white">5.0s</span></label>
+                    <input type="range" id="duration-2" min="0.5" max="120" step="0.5" value="5"
+                           oninput="updateDuration(1, this.value)"
+                           class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer slider-duration">
+                </div>
+
+                <button id="toggle-2" onclick="toggleOscillator(1)" class="w-full py-2 rounded-lg font-medium transition duration-200 bg-gray-600 hover:bg-gray-500 text-gray-300">
+                    OFF
+                </button>
+            </div>
+
+            <!-- Channel 3 (Default: Organ) -->
+            <div id="channel-3" class="channel-card bg-gray-800 p-4 rounded-xl border-2 border-gray-700 flex flex-col items-center">
+                <h2 class="text-xl font-semibold mb-3 text-indigo-400">Channel 3</h2>
+
+                <!-- Waveform Selector -->
+                <div class="w-full mb-3">
+                    <label for="waveform-3" class="block text-sm font-medium text-gray-400 mb-1">Waveform</label>
+                    <select id="waveform-3" onchange="changeWaveform(2, this.value)"
+                            class="w-full p-2 rounded-lg bg-gray-700 text-white border border-gray-600 focus:ring-indigo-500 focus:border-indigo-500">
+                        <option value="sine">Sine</option>
+                        <option value="triangle">Triangle</option>
+                        <option value="square">Square</option>
+                        <option value="sawtooth">Sawtooth</option>
+                        <option value="organ" selected>Organ (Rich)</option>
+                    </select>
+                </div>
+
+                <div class="knob-container mb-4">
+                    <div class="knob-base"></div>
+                    <div id="knob-3" class="knob-marker" data-channel="2">
+                        <div id="indicator-3" class="knob-indicator" style="transform: translateX(-50%) rotate(0deg);"></div>
+                    </div>
+                </div>
+                <span id="freq-display-3" class="text-lg font-mono text-gray-300 mb-4">440 Hz</span>
+
+                <!-- Duration Control -->
+                <div class="w-full mb-4">
+                    <label for="duration-3" class="block text-sm font-medium text-gray-400">Ramp Duration: <span id="time-display-3" class="font-mono text-white">5.0s</span></label>
+                    <input type="range" id="duration-3" min="0.5" max="120" step="0.5" value="5"
+                           oninput="updateDuration(2, this.value)"
+                           class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer slider-duration">
+                </div>
+
+                <button id="toggle-3" onclick="toggleOscillator(2)" class="w-full py-2 rounded-lg font-medium transition duration-200 bg-gray-600 hover:bg-gray-500 text-gray-300">
+                    OFF
+                </button>
+            </div>
+
+            <!-- Channel 4 (Default: Organ) -->
+            <div id="channel-4" class="channel-card bg-gray-800 p-4 rounded-xl border-2 border-gray-700 flex flex-col items-center">
+                <h2 class="text-xl font-semibold mb-3 text-indigo-400">Channel 4</h2>
+
+                <!-- Waveform Selector -->
+                <div class="w-full mb-3">
+                    <label for="waveform-4" class="block text-sm font-medium text-gray-400 mb-1">Waveform</label>
+                    <select id="waveform-4" onchange="changeWaveform(3, this.value)"
+                            class="w-full p-2 rounded-lg bg-gray-700 text-white border border-gray-600 focus:ring-indigo-500 focus:border-indigo-500">
+                        <option value="sine">Sine</option>
+                        <option value="triangle">Triangle</option>
+                        <option value="square">Square</option>
+                        <option value="sawtooth">Sawtooth</option>
+                        <option value="organ" selected>Organ (Rich)</option>
+                    </select>
+                </div>
+
+                <div class="knob-container mb-4">
+                    <div class="knob-base"></div>
+                    <div id="knob-4" class="knob-marker" data-channel="3">
+                        <div id="indicator-4" class="knob-indicator" style="transform: translateX(-50%) rotate(0deg);"></div>
+                    </div>
+                </div>
+                <span id="freq-display-4" class="text-lg font-mono text-gray-300 mb-4">440 Hz</span>
+
+                <!-- Duration Control -->
+                <div class="w-full mb-4">
+                    <label for="duration-4" class="block text-sm font-medium text-gray-400">Ramp Duration: <span id="time-display-4" class="font-mono text-white">5.0s</span></label>
+                    <input type="range" id="duration-4" min="0.5" max="120" step="0.5" value="5"
+                           oninput="updateDuration(3, this.value)"
+                           class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer slider-duration">
+                </div>
+
+                <button id="toggle-4" onclick="toggleOscillator(3)" class="w-full py-2 rounded-lg font-medium transition duration-200 bg-gray-600 hover:bg-gray-500 text-gray-300">
+                    OFF
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- Web Audio API Setup and Global Constants ---
+        let audioContext;
+        const FREQ_MIN = 50; // Minimum frequency in Hz
+        const FREQ_MAX = 1000; // Maximum frequency in Hz
+        const GAIN_LEVEL = 0.5; // Fixed volume level
+
+        // NEW CONSTANTS for Pitch Shift
+        const INCLINE_MULT = 4.0;   // +2 Octaves
+        const DECLINE_MULT = 0.25;  // -2 Octaves
+        let masterPitchMultiplier = 1.0; // Tracks current shift state (1.0, 4.0, or 0.25)
+
+        // NEW CONSTANT: Maximum frequency when Low Mode is active
+        const LOW_MODE_MAX_FREQ = 205;
+        let isLowModeActive = false; // Tracks the Low Mode status
+
+        // Mapped values for the Web Audio API OscillatorNode type
+        const WAVEFORM_MAP = {
+            'sine': 'sine',
+            'triangle': 'triangle',
+            'square': 'square',
+            'sawtooth': 'sawtooth',
+            'organ': 'custom-organ', // Custom type now mapped to PeriodicWave
+        };
+
+        let organWaveform; // Holds the PeriodicWave for the custom organ sound
+
+        const channels = [];
+        let activeAnimations = [null, null, null, null];
+        const pitchShiftTimeouts = [null, null, null, null];
+
+        // Creates a custom PeriodicWave for a richer organ-like tone (using harmonics 1, 2, 3, 4, 5)
+        function createOrganWaveform() {
+            if (!audioContext) return;
+            const numHarmonics = 8;
+            const real = new Float32Array(numHarmonics);
+            const imag = new Float32Array(numHarmonics);
+
+            // Fundamental (1st harmonic)
+            real[1] = 0.8;
+            // Octave (2nd harmonic)
+            real[2] = 0.4;
+            // 3rd, 4th, 5th, etc., harmonics for richness
+            real[3] = 0.3;
+            real[4] = 0.2;
+            real[5] = 0.15;
+            real[6] = 0.1;
+
+            return audioContext.createPeriodicWave(real, imag, { disableNormalization: false });
+        }
+
+
+        // Function to initialise the AudioContext and all channels
+        function initAudio() {
+            try {
+                if (!audioContext) {
+                    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    organWaveform = createOrganWaveform(); // Initialise custom waveform
+                }
+
+                for (let i = 0; i < 4; i++) {
+                    const oscillator = audioContext.createOscillator();
+                    const gainNode = audioContext.createGain();
+
+                    oscillator.connect(gainNode);
+                    gainNode.connect(audioContext.destination);
+
+                    // Read the default value set in the HTML select element
+                    const initialWaveform = document.getElementById(`waveform-${i + 1}`).value;
+                    const initialFreq = calculateFrequency(0.5);
+
+                    // Set initial waveform type
+                    setOscillatorWaveform(oscillator, initialWaveform);
+
+                    oscillator.frequency.setValueAtTime(initialFreq, audioContext.currentTime);
+                    gainNode.gain.setValueAtTime(0, audioContext.currentTime);
+
+                    oscillator.start();
+
+                    channels.push({
+                        oscillator: oscillator,
+                        gainNode: gainNode,
+                        knobValue: 0.5,
+                        isOn: false,
+                        duration: 5,
+                        channelId: i + 1,
+                        waveformType: initialWaveform
+                    });
+
+                    updateFrequencyDisplay(i, initialFreq);
+                    updateTimeDisplay(i, 5);
+                }
+            } catch (error) {
+                console.error("Audio Context initialisation failed, Sir:", error);
+            }
+        }
+
+        // Helper function to set the correct waveform type or PeriodicWave
+        function setOscillatorWaveform(oscillator, type) {
+            if (type === 'organ') {
+                oscillator.setPeriodicWave(organWaveform);
+            } else {
+                // Use standard built-in types
+                oscillator.type = WAVEFORM_MAP[type] || 'sine';
+            }
+        }
+
+
+        // Function called by the overlay button to resume or start the context
+        function startAudio() {
+            const startOverlay = document.getElementById('start-overlay');
+            if (audioContext && audioContext.state === 'suspended') {
+                audioContext.resume().then(() => {
+                    startOverlay.style.opacity = '0';
+                    setTimeout(() => startOverlay.style.display = 'none', 500);
+                    console.log('AudioContext resumed successfully, Sir.');
+                }).catch(err => console.error('Failed to resume AudioContext, Sir:', err));
+            } else if (!audioContext) {
+                initAudio();
+                startOverlay.style.opacity = '0';
+                setTimeout(() => startOverlay.style.display = 'none', 500);
+                console.log('AudioContext initialised successfully, Sir.');
+            } else {
+                startOverlay.style.opacity = '0';
+                setTimeout(() => startOverlay.style.display = 'none', 500);
+            }
+        }
+
+        // --- Core Control Functions ---
+
+        // Toggles the waveform on or off
+        function toggleOscillator(index) {
+            if (!audioContext) {
+                console.error("AudioContext not ready, Sir.");
+                return;
+            }
+
+            const channel = channels[index];
+            const toggleButton = document.getElementById(`toggle-${index + 1}`);
+            const cardElement = document.getElementById(`channel-${index + 1}`);
+
+            if (channel.isOn) {
+                channel.gainNode.gain.cancelScheduledValues(audioContext.currentTime);
+                channel.gainNode.gain.linearRampToValueAtTime(0, audioContext.currentTime + 0.05);
+
+                toggleButton.textContent = 'OFF';
+                toggleButton.classList.remove('bg-green-600', 'hover:bg-green-500');
+                toggleButton.classList.add('bg-gray-600', 'hover:bg-gray-500', 'text-gray-300');
+                cardElement.classList.remove('channel-card-active');
+                channel.isOn = false;
+            } else {
+                channel.gainNode.gain.cancelScheduledValues(audioContext.currentTime);
+                channel.gainNode.gain.linearRampToValueAtTime(GAIN_LEVEL, audioContext.currentTime + 0.05);
+
+                toggleButton.textContent = 'ON';
+                toggleButton.classList.remove('bg-gray-600', 'hover:bg-gray-500', 'text-gray-300');
+                toggleButton.classList.add('bg-green-600', 'hover:bg-green-500', 'text-white');
+                cardElement.classList.add('channel-card-active');
+                channel.isOn = true;
+            }
+        }
+
+        // Changes the waveform type of an oscillator
+        function changeWaveform(index, type) {
+            const channel = channels[index];
+            setOscillatorWaveform(channel.oscillator, type);
+            channel.waveformType = type;
+            console.log(`Channel ${index + 1} waveform changed to ${type}, Sir.`);
+        }
+
+        // Calculates frequency from a normalized value (0 to 1) using a logarithmic scale
+        function calculateFrequency(normalizedValue) {
+            const currentMaxFreq = isLowModeActive ? LOW_MODE_MAX_FREQ : FREQ_MAX;
+
+            // Map the 0-1 knob value across the FREQ_MIN to currentMaxFreq range using log scale
+            return FREQ_MIN * Math.pow(currentMaxFreq / FREQ_MIN, normalizedValue);
+        }
+
+        // Helper function to convert frequency back to a normalized value (0 to 1) for knob visuals
+        function freqToNormalized(freq) {
+            const currentMaxFreq = isLowModeActive ? LOW_MODE_MAX_FREQ : FREQ_MAX;
+            // Clamp the frequency to the valid range to avoid Math.log errors
+            const clampedFreq = Math.max(FREQ_MIN, Math.min(currentMaxFreq, freq));
+            return Math.log(clampedFreq / FREQ_MIN) / Math.log(currentMaxFreq / FREQ_MIN);
+        }
+
+
+        // Updates the frequency of the oscillator and the display
+        function updateFrequency(index, normalizedValue) {
+            const channel = channels[index];
+
+            // If master shift is active, we should reset it on manual knob movement
+            if (masterPitchMultiplier !== 1.0) {
+                 resetMasterEffectState();
+            }
+
+            const freq = calculateFrequency(normalizedValue);
+
+            // Cancel any ongoing audio ramps and visual animations immediately when the knob is moved
+            if (audioContext) {
+                 channel.oscillator.frequency.cancelScheduledValues(audioContext.currentTime);
+            }
+            if (activeAnimations[index]) {
+                cancelAnimationFrame(activeAnimations[index]);
+                activeAnimations[index] = null;
+            }
+
+            channel.knobValue = normalizedValue;
+
+            // Apply frequency change to the oscillator
+            if (audioContext) {
+                 channel.oscillator.frequency.setValueAtTime(freq, audioContext.currentTime);
+            }
+
+            updateFrequencyDisplay(index, freq);
+
+            // Ensure visual knob matches the new manual position
+            updateKnobVisuals(index, valueToRotation(normalizedValue));
+        }
+
+        // Updates the duration setting for a channel
+        function updateDuration(index, seconds) {
+            const channel = channels[index];
+            channel.duration = parseFloat(seconds);
+            updateTimeDisplay(index, channel.duration);
+
+            const durationInput = document.getElementById(`duration-${index + 1}`);
+            if (durationInput) {
+                if (parseFloat(durationInput.value) !== channel.duration) {
+                    durationInput.value = channel.duration;
+                }
+            }
+        }
+
+        // Updates the visual text display for frequency
+        function updateFrequencyDisplay(index, freq) {
+            const display = document.getElementById(`freq-display-${index + 1}`);
+            if (display) {
+                display.textContent = `${Math.round(freq)} Hz`;
+            }
+        }
+
+        // Updates the visual text display for duration
+        function updateTimeDisplay(index, seconds) {
+            const display = document.getElementById(`time-display-${index + 1}`);
+
+            const totalSeconds = parseFloat(seconds);
+            if (isNaN(totalSeconds)) return;
+
+            const minutes = Math.floor(totalSeconds / 60);
+            const remainderSeconds = totalSeconds % 60;
+
+            let timeString;
+            if (minutes > 0) {
+                // Format as M min S.s s (e.g., 2 min 30.0 s)
+                timeString = `${minutes} min ${remainderSeconds.toFixed(1).replace(/\.0$/, '')}s`;
+            } else {
+                // Format as S.ss s (e.g., 5.0 s)
+                timeString = `${remainderSeconds.toFixed(1)}s`;
+            }
+
+            if (display) {
+                display.textContent = timeString;
+            }
+        }
+
+        // --- Visual Animation Logic for Dial Movement ---
+
+        function animateDial(index, startFreq, endFreq, durationSeconds) {
+            // Cancel any existing animation for this channel
+            if (activeAnimations[index]) {
+                cancelAnimationFrame(activeAnimations[index]);
+                activeAnimations[index] = null;
+            }
+
+            const startKnobValue = freqToNormalized(startFreq);
+            const endKnobValue = freqToNormalized(endFreq);
+
+            const startTime = performance.now();
+
+            function step(currentTime) {
+                const elapsed = (currentTime - startTime) / 1000;
+                const progress = Math.min(1, elapsed / durationSeconds);
+
+                // Linear interpolation of the normalized knob value
+                const currentKnobValue = startKnobValue + (endKnobValue - startKnobValue) * progress;
+
+                const currentFreq = channels[index].oscillator.frequency.value; // Use the actual audio frequency
+
+                // Update the visual knob rotation
+                const rotation = valueToRotation(currentKnobValue);
+                updateKnobVisuals(index, rotation);
+
+                // Update the display text to match the audio target if the user hasn't moved the knob manually
+                updateFrequencyDisplay(index, currentFreq);
+
+                if (progress < 1) {
+                    activeAnimations[index] = requestAnimationFrame(step);
+                } else {
+                    // Animation finished
+                    activeAnimations[index] = null;
+                    // Ensure the final state is represented in the display/knob
+                    updateKnobVisuals(index, valueToRotation(endKnobValue));
+                    updateFrequencyDisplay(index, endFreq);
+                }
+            }
+
+            activeAnimations[index] = requestAnimationFrame(step);
+        }
+
+        // --- Pitch Shift (Incline/Decline) Logic ---
+
+        // Resets the master pitch shift state back to neutral (1.0x)
+        function resetMasterEffectState() {
+             if (masterPitchMultiplier !== 1.0) {
+                // Clear all active classes
+                channels.forEach((channel, index) => {
+                    // Also ensure any running animation is stopped gracefully
+                    if (activeAnimations[index]) {
+                        cancelAnimationFrame(activeAnimations[index]);
+                        activeAnimations[index] = null;
+                    }
+                    if (pitchShiftTimeouts[index]) clearTimeout(pitchShiftTimeouts[index]);
+                    document.getElementById(`channel-${index + 1}`).classList.remove('incline-active', 'decline-active');
+                });
+                masterPitchMultiplier = 1.0;
+                updatePitchShiftButtonVisuals();
+            }
+        }
+
+        // Toggles the Low Mode state
+        function toggleLowMode() {
+            const lowModeButton = document.getElementById('low-mode-button');
+            isLowModeActive = !isLowModeActive;
+
+            if (isLowModeActive) {
+                lowModeButton.classList.add('low-active-style');
+                lowModeButton.classList.remove('bg-gray-600', 'hover:bg-gray-500', 'text-gray-300');
+                lowModeButton.textContent = 'Low (ACTIVE)';
+                console.log("Low Mode activated. Max frequency for presets is 205 Hz, Sir.");
+            } else {
+                lowModeButton.classList.remove('low-active-style');
+                lowModeButton.classList.add('bg-gray-600', 'hover:bg-gray-500', 'text-gray-300');
+                lowModeButton.textContent = 'Low (< 205 Hz)';
+                console.log("Low Mode deactivated. Presets use full 1000 Hz range, Sir.");
+            }
+
+            // Reset any pitch shift, as the underlying frequency range has changed.
+            resetMasterEffectState();
+
+            // Recalculate and set current frequencies based on the knob position in the new range
+            channels.forEach((channel, index) => {
+                const newFreq = calculateFrequency(channel.knobValue);
+                if (audioContext) {
+                    channel.oscillator.frequency.setValueAtTime(newFreq, audioContext.currentTime);
+                }
+                updateFrequencyDisplay(index, newFreq);
+                // No need to update knob visuals, as the knobValue hasn't changed, only the mapping
+            });
+        }
+
+        // Core function to handle the shift, ramp, and state management
+        function applyPitchShift(targetMultiplier) {
+            if (!audioContext || audioContext.state !== 'running') {
+                console.warn("Cannot apply pitch shift, Sir. AudioContext is not running.");
+                return;
+            }
+
+            // Determine the CSS class for visual glow
+            let targetClass = '';
+            if (targetMultiplier === INCLINE_MULT) targetClass = 'incline-active';
+            if (targetMultiplier === DECLINE_MULT) targetClass = 'decline-active';
+
+            const isClearing = targetMultiplier === 1.0;
+
+            channels.forEach((channel, index) => {
+                // We perform the shift even if the channel is OFF to prepare it for when it's turned ON
+                // if (!channel.isOn) return; // Removed this guard so the effect is ready for ON/OFF channels
+
+                const durationSeconds = channel.duration;
+                const cardElement = document.getElementById(`channel-${index + 1}`);
+
+                // The frequency set by the knob (the 1.0x neutral target)
+                const knobSetFreq = calculateFrequency(channel.knobValue);
+
+                // The actual frequency we are ramping to
+                const finalTargetFreq = knobSetFreq * targetMultiplier;
+
+                const startFreq = channel.oscillator.frequency.value;
+
+                // 1. Cancel existing schedules/animations/timeouts
+                channel.oscillator.frequency.cancelScheduledValues(audioContext.currentTime);
+                if (activeAnimations[index]) cancelAnimationFrame(activeAnimations[index]);
+                if (pitchShiftTimeouts[index]) clearTimeout(pitchShiftTimeouts[index]);
+
+
+                // 2. AUDIO: Schedule the ramp
+                const rampEndTime = audioContext.currentTime + durationSeconds;
+                channel.oscillator.frequency.setValueAtTime(startFreq, audioContext.currentTime);
+                channel.oscillator.frequency.linearRampToValueAtTime(finalTargetFreq, rampEndTime);
+
+                // 3. VISUALS: Start the dial animation
+                animateDial(index, startFreq, finalTargetFreq, durationSeconds);
+
+                // 4. STATE/UI: Manage classes
+                cardElement.classList.remove('incline-active', 'decline-active');
+
+                if (!isClearing) {
+                    // Apply new class immediately when starting effect
+                    cardElement.classList.add(targetClass);
+                } else {
+                    // Schedule class removal *after* the ramp down finishes
+                    pitchShiftTimeouts[index] = setTimeout(() => {
+                        cardElement.classList.remove('incline-active', 'decline-active');
+                    }, durationSeconds * 1000);
+                }
+
+                console.log(`Channel ${index + 1}: Ramping from ${Math.round(startFreq)} Hz to ${Math.round(finalTargetFreq)} Hz over ${durationSeconds}s, Sir.`);
+            });
+
+            // Update master state
+            masterPitchMultiplier = targetMultiplier;
+
+            // Update button visuals
+            updatePitchShiftButtonVisuals();
+        }
+
+        // Toggles button styles based on the current multiplier state
+        function updatePitchShiftButtonVisuals() {
+            const inclineBtn = document.getElementById('incline-button');
+            const declineBtn = document.getElementById('decline-button');
+
+            const isInclined = masterPitchMultiplier === INCLINE_MULT;
+            const isDeclined = masterPitchMultiplier === DECLINE_MULT;
+
+            // Reset base styles
+            [inclineBtn, declineBtn].forEach(btn => {
+                btn.classList.remove('bg-red-600', 'hover:bg-red-500');
+                btn.classList.add('bg-purple-600', 'hover:bg-purple-500');
+            });
+
+            if (isInclined) {
+                inclineBtn.textContent = 'Incline (ACTIVE - Click to Reset)';
+                inclineBtn.classList.remove('bg-purple-600', 'hover:bg-purple-500');
+                inclineBtn.classList.add('bg-red-600', 'hover:bg-red-500');
+            } else {
+                inclineBtn.textContent = 'Incline (+2 Octaves)';
+            }
+
+            if (isDeclined) {
+                declineBtn.textContent = 'Decline (ACTIVE - Click to Reset)';
+                declineBtn.classList.remove('bg-purple-600', 'hover:bg-purple-500');
+                declineBtn.classList.add('bg-red-600', 'hover:bg-red-500');
+            } else {
+                declineBtn.textContent = 'Decline (-2 Octaves)';
+            }
+        }
+
+        // Handler for the Incline button click
+        function handleInclineClick() {
+            if (masterPitchMultiplier === INCLINE_MULT) {
+                applyPitchShift(1.0); // Reset to neutral
+            } else {
+                applyPitchShift(INCLINE_MULT); // Apply incline (4.0x)
+            }
+        }
+
+        // Handler for the Decline button click
+        function handleDeclineClick() {
+            if (masterPitchMultiplier === DECLINE_MULT) {
+                applyPitchShift(1.0); // Reset to neutral
+            } else {
+                applyPitchShift(DECLINE_MULT); // Apply decline (0.25x)
+            }
+        }
+
+        // --- Randomiser Functions ---
+
+        // Sets all frequencies to a random value within the range 50-1000 Hz, maintaining a 2-octave playable range.
+        function setRandomFrequencies() {
+            if (!audioContext) {
+                console.warn("AudioContext not ready, Sir.");
+                return;
+            }
+
+            // Reset pitch shift state first
+            resetMasterEffectState();
+
+            // Determine the maximum frequency limit based on Low Mode
+            const currentMaxFreq = isLowModeActive ? LOW_MODE_MAX_FREQ : FREQ_MAX;
+
+            // Max base frequency must ensure the highest random frequency (4x) remains within currentMaxFreq.
+            const currentMaxBaseFreq = currentMaxFreq / 4;
+
+            // Randomly select a base frequency for the 2-octave range
+            const randomBaseFreq = Math.random() * (currentMaxBaseFreq - FREQ_MIN) + FREQ_MIN;
+
+            channels.forEach((channel, index) => {
+                // Generate a random frequency within the 2-octave range (F_base to F_base * 4)
+                const randomFreq = Math.random() * (randomBaseFreq * 4 - randomBaseFreq) + randomBaseFreq;
+
+                // Convert this random frequency back to the normalized knob value (0 to 1)
+                const normalizedValue = freqToNormalized(randomFreq);
+
+                // Update state and visual knob position
+                channel.knobValue = normalizedValue;
+
+                // Apply the frequency to the oscillator
+                channel.oscillator.frequency.cancelScheduledValues(audioContext.currentTime);
+                channel.oscillator.frequency.setValueAtTime(randomFreq, audioContext.currentTime);
+
+                // Update display and visual knob
+                updateFrequencyDisplay(index, randomFreq);
+                updateKnobVisuals(index, valueToRotation(normalizedValue));
+
+                console.log(`Channel ${index + 1} set to random frequency: ${Math.round(randomFreq)} Hz, Sir.`);
+            });
+        }
+
+        // Sets all frequencies to be a harmonic of a single randomly chosen fundamental.
+        function setHarmonicFrequencies() {
+            if (!audioContext) {
+                console.warn("AudioContext not ready, Sir.");
+                return;
+            }
+
+            // Reset pitch shift state first
+            resetMasterEffectState();
+
+            // Determine the maximum frequency limit based on Low Mode
+            const currentMaxFreq = isLowModeActive ? LOW_MODE_MAX_FREQ : FREQ_MAX;
+
+            // Max fundamental must ensure the 4th harmonic remains within currentMaxFreq.
+            const currentFundamentalMax = currentMaxFreq / 4;
+
+            const fundamental = Math.random() * (currentFundamentalMax - FREQ_MIN) + FREQ_MIN;
+
+            // We use the 1st, 2nd, 3rd, and 4th harmonics for simple musical tuning.
+            const harmonics = [1, 2, 3, 4];
+
+            console.log(`Setting harmonics based on Fundamental: ${Math.round(fundamental)} Hz, Sir.`);
+
+            channels.forEach((channel, index) => {
+                // Randomly select a harmonic number (1, 2, 3, or 4)
+                const harmonicIndex = Math.floor(Math.random() * harmonics.length);
+                const harmonicNumber = harmonics[harmonicIndex];
+
+                const newFreq = fundamental * harmonicNumber;
+
+                // Convert newFreq to normalized knob value (0 to 1)
+                const normalizedValue = freqToNormalized(newFreq);
+
+                // Update state and visual knob position
+                channel.knobValue = normalizedValue;
+
+                // Apply the frequency to the oscillator
+                channel.oscillator.frequency.cancelScheduledValues(audioContext.currentTime);
+                channel.oscillator.frequency.setValueAtTime(newFreq, audioContext.currentTime);
+
+                // Update display and visual knob
+                updateFrequencyDisplay(index, newFreq);
+                updateKnobVisuals(index, valueToRotation(normalizedValue));
+
+                console.log(`Channel ${index + 1} set to ${harmonicNumber}x harmonic: ${Math.round(newFreq)} Hz, Sir.`);
+            });
+        }
+
+        // Sets all frequencies to bell partials (non-harmonic ratios)
+        function setBellFrequencies() {
+             if (!audioContext) {
+                console.warn("AudioContext not ready, Sir.");
+                return;
+            }
+
+            // Reset pitch shift state first
+            resetMasterEffectState();
+
+            // Determine the maximum frequency limit based on Low Mode
+            const currentMaxFreq = isLowModeActive ? LOW_MODE_MAX_FREQ : FREQ_MAX;
+
+            // Standard ratios for a minor third bell chord (partials):
+            // Hum: 1.0 (fundamental)
+            // Nominal: 2.0 (strike note)
+            // Tierce: 2.4 (minor third)
+            // Quint: 3.0 (perfect fifth)
+            // Upper Octave: 4.0
+            const bellPartials = [1.0, 2.0, 2.4, 3.0, 4.0];
+
+            // Max fundamental (Hum) must ensure the highest partial (4.0x) remains within currentMaxFreq.
+            const currentFundamentalMax = currentMaxFreq / 4;
+
+            const fundamentalHum = Math.random() * (currentFundamentalMax - FREQ_MIN) + FREQ_MIN;
+
+            console.log(`Setting bell partials based on Hum frequency: ${Math.round(fundamentalHum)} Hz, Sir.`);
+
+            // Create a copy of the partials array to randomly select and remove 4 unique values
+            let availablePartials = [...bellPartials];
+
+            channels.forEach((channel, index) => {
+                // 1. Select a random partial from the available list
+                const randomIndex = Math.floor(Math.random() * availablePartials.length);
+                const partialRatio = availablePartials.splice(randomIndex, 1)[0];
+
+                // 2. Calculate the new frequency
+                const newFreq = fundamentalHum * partialRatio;
+
+                // 3. Convert newFreq to normalized knob value (0 to 1)
+                const normalizedValue = freqToNormalized(newFreq);
+
+                // 4. Update state, oscillator, display, and knob
+                channel.knobValue = normalizedValue;
+
+                channel.oscillator.frequency.cancelScheduledValues(audioContext.currentTime);
+                channel.oscillator.frequency.setValueAtTime(newFreq, audioContext.currentTime);
+
+                updateFrequencyDisplay(index, newFreq);
+                updateKnobVisuals(index, valueToRotation(normalizedValue));
+
+                console.log(`Channel ${index + 1} set to partial ratio ${partialRatio.toFixed(1)}x: ${Math.round(newFreq)} Hz, Sir.`);
+            });
+        }
+
+
+        // Randomises the boost duration for each channel, with a max spread of 24s.
+        function randomiseBoostTimes() {
+            // Note: These constants ensure times are appropriate for longer ramps.
+            const DURATION_MIN = 9;
+            const DURATION_MAX = 52;
+            const DURATION_SPREAD_MAX = 24;
+
+            // 1. Pick a random base time (T_base) within the total range [9s, 52s]
+            const T_base = Math.random() * (DURATION_MAX - DURATION_MIN) + DURATION_MIN;
+
+            // 2. Determine the allowed window boundaries (T_min_actual and T_max_actual)
+            let T_min_desired = T_base - (DURATION_SPREAD_MAX / 2);
+            let T_max_desired = T_base + (DURATION_SPREAD_MAX / 2);
+
+            // 3. Clamp the window to the overall DURATION_MIN/MAX boundaries [9s, 52s]
+            let T_min_actual = Math.max(DURATION_MIN, T_min_desired);
+            let T_max_actual = Math.min(DURATION_MAX, T_max_desired);
+
+            // Re-adjust window if clamping shifted one boundary (to maintain max spread)
+            if (T_min_desired < DURATION_MIN) {
+                T_max_actual = Math.min(DURATION_MAX, DURATION_MIN + DURATION_SPREAD_MAX);
+            }
+            else if (T_max_desired > DURATION_MAX) {
+                T_min_actual = Math.max(DURATION_MIN, DURATION_MAX - DURATION_SPREAD_MAX);
+            }
+
+            console.log(`Random Duration Range: [${T_min_actual.toFixed(1)}s, ${T_max_actual.toFixed(1)}s]. Spread: ${(T_max_actual - T_min_actual).toFixed(1)}s`);
+
+
+            // 4. Generate 4 random times within the determined window
+            channels.forEach((channel, index) => {
+                const randomTime = Math.random() * (T_max_actual - T_min_actual) + T_min_actual;
+
+                // Clamp the result just in case of floating point inaccuracies
+                const finalDuration = Math.max(DURATION_MIN, Math.min(DURATION_MAX, randomTime));
+
+                // Update the channel state and UI
+                updateDuration(index, finalDuration);
+
+                console.log(`Channel ${index + 1} duration set to: ${finalDuration.toFixed(1)}s, Sir.`);
+            });
+        }
+
+
+        // --- Knob/Dial Interaction Logic (Mobile/Desktop Friendly) ---
+
+        // Maps the normalized knob value (0 to 1) to a rotation angle (-135deg to +135deg)
+        function valueToRotation(value) {
+            return (value * 270) - 135;
+        }
+
+        // Updates the visual rotation of the dial marker
+        function updateKnobVisuals(index, rotation) {
+            const indicator = document.getElementById(`indicator-${index + 1}`);
+            if (indicator) {
+                indicator.style.transform = `translateX(-50%) rotate(${rotation}deg)`;
+            }
+        }
+
+        let activeKnob = null;
+        let startY = 0;
+        let startKnobValue = 0;
+        const ROTATION_SENSITIVITY = 1 / 200; // 200px drag = 100% value change
+
+        function handleStart(event) {
+            event.preventDefault();
+
+            const knobElement = event.currentTarget;
+            const channelIndex = parseInt(knobElement.dataset.channel);
+
+            activeKnob = channelIndex;
+
+            startY = event.type === 'touchstart' ? event.touches[0].clientY : event.clientY;
+            startKnobValue = channels[activeKnob].knobValue;
+
+            knobElement.style.cursor = 'grabbing';
+
+            // If the user starts interacting with a knob during a pitch shift,
+            // the shift must be immediately cancelled and the state reset.
+            if (masterPitchMultiplier !== 1.0) {
+                channels[activeKnob].oscillator.frequency.cancelScheduledValues(audioContext.currentTime);
+                if (activeAnimations[activeKnob]) {
+                    cancelAnimationFrame(activeAnimations[activeKnob]);
+                    activeAnimations[activeKnob] = null;
+                }
+                // Global state reset
+                resetMasterEffectState();
+            }
+        }
+
+        function handleMove(event) {
+            if (activeKnob === null) return;
+
+            const currentY = event.type === 'touchmove' ? event.touches[0].clientY : event.clientY;
+
+            const deltaY = startY - currentY;
+
+            let newValue = startKnobValue + (deltaY * ROTATION_SENSITIVITY);
+
+            newValue = Math.max(0, Math.min(1, newValue));
+
+            updateFrequency(activeKnob, newValue);
+        }
+
+        function handleEnd() {
+            if (activeKnob !== null) {
+                document.getElementById(`knob-${activeKnob + 1}`).style.cursor = 'grab';
+                activeKnob = null;
+            }
+        }
+
+        // --- Initialisation on Load ---
+
+        window.onload = function() {
+            initAudio();
+
+            const knobs = document.querySelectorAll('.knob-marker');
+            knobs.forEach(knob => {
+                knob.addEventListener('mousedown', handleStart);
+                knob.addEventListener('touchstart', handleStart);
+            });
+
+            document.addEventListener('mousemove', handleMove);
+            document.addEventListener('mouseup', handleEnd);
+            document.addEventListener('touchmove', handleMove);
+            document.addEventListener('touchend', handleEnd);
+            document.addEventListener('touchcancel', handleEnd);
+
+            channels.forEach((channel, index) => {
+                const rotation = valueToRotation(channel.knobValue);
+                updateKnobVisuals(index, rotation);
+                updateFrequencyDisplay(index, calculateFrequency(channel.knobValue));
+                updateTimeDisplay(index, channel.duration);
+            });
+
+            // Initial style setup for the new buttons
+            updatePitchShiftButtonVisuals();
+            const lowModeButton = document.getElementById('low-mode-button');
+            lowModeButton.classList.add('bg-gray-600', 'hover:bg-gray-500', 'text-gray-300');
+            lowModeButton.textContent = 'Low (< 205 Hz)';
+        };
+
+    </script>
+</body>
+</html>
+
+
+
